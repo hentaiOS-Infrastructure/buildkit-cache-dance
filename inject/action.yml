@@ -4,9 +4,6 @@ inputs:
   cache-source:
     default: cache
     description: "Where the cache is stored in the calling workspace. Default: `cache`"
-  cache-target:
-    default: /root/.cache/go-build
-    description: "Where the cache is stored in the docker container. Default: `/root/.cache/go-build`"
   scratch-dir:
     default: scratch
     description: "Where the action is stores some temporary files for its processing. Default: `scratch`"
@@ -27,9 +24,11 @@ runs:
         cat > ${{ inputs.scratch-dir }}/Dancefile.inject <<EOF
         FROM alpine:3.17
         COPY ${{ inputs.scratch-dir }}/buildstamp buildstamp
-        RUN --mount=type=cache,target=${{ inputs.cache-target }} \
+        RUN --mount=type=cache,target=/root/.cache/go-build \
+            --mount=type=cache,target=/go/pkg \
             --mount=type=bind,source=${{ inputs.cache-source }},target=/var/dance-cache \
-            cp -R /var/dance-cache/* ${{ inputs.cache-target }} || true
+            cp -R /var/dance-cache/go-build /root/.cache/go-build \
+            && cp -R /var/dance-cache/pkg /go/pkg || true
         EOF
         cat ${{ inputs.scratch-dir }}/Dancefile.inject
     - name: Inject Data into Docker Cache

@@ -4,9 +4,6 @@ inputs:
   cache-source:
     default: cache
     description: "Where the cache is stored in the calling workspace. Default: `cache`"
-  cache-target:
-    default: /root/.cache/go-build
-    description: "Where the cache is stored in the docker container. Default: `/root/.cache/go-build`"
   scratch-dir:
     default: scratch
     description: "Where the action is stores some temporary files for its processing. Default: `scratch`"
@@ -23,9 +20,10 @@ runs:
         cat > ${{ inputs.scratch-dir }}/Dancefile.extract <<EOF
         FROM alpine:3.17
         COPY ${{ inputs.scratch-dir }}/buildstamp buildstamp
-        RUN --mount=type=cache,target=${{ inputs.cache-target }} \
+        RUN --mount=type=cache,target=/root/.cache/go-build \
+            --mount=type=cache,target=/go/pkg \
             mkdir -p /var/dance-cache/ \
-            && cp -R ${{ inputs.cache-target }}/* /var/dance-cache/ || true
+            && cp -R /root/.cache/go-build /go/pkg /var/dance-cache/ || true
         EOF
         cat ${{ inputs.scratch-dir }}/Dancefile.extract
     - name: Extract Data into Docker Image
@@ -39,7 +37,7 @@ runs:
     - name: Unpack Docker Image into Scratch
       shell: bash
       run: |
-          docker cp -L cache-container:/var/dance-cache - | tar -x -m -C ${{ inputs.scratch-dir }}
+        docker cp -L cache-container:/var/dance-cache - | tar -x -m -C ${{ inputs.scratch-dir }}
     - name: Move Cache into Its Place
       shell: bash
       run: |
